@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  orders-service:
+    build: ./services/orders-service
+    container_name: orders-service
+    ports:
+      - "8001:8000"
+    environment:
+      APP_ENV: local
+      # APP_KEY: base64:/TW5TYKP4vyaWNQ7zXjoekX57GUDTmMHgrn9uh7dYdg=
+      APP_DEBUG: true
+      DB_CONNECTION: mongodb
+      DB_HOST: mongodb://orders-mongo:27017
+      DB_DATABASE: orders_db
+      # DB_PORT: 27017
+      REDIS_HOST: orders-redis
+      KAFKA_BROKERS: kafka:9092
+    depends_on:
+      - orders-mongo
+      - orders-redis
+      - kafka
+    networks:
+      - laravel_network
+
+  orders-mongo:
+    image: mongo:latest
+    container_name: orders-mongo
+    volumes:
+      - orders_mongo_data:/data/db
+    networks:
+      - laravel_network
+
+
+  orders-redis:
+    image: redis:alpine
+    container_name: orders-redis
+    networks:
+      - laravel_network
+
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.1
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    networks:
+      - laravel_network
+
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.1
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - laravel_network
+
+
+volumes:
+  orders_mongo_data: {}
+
+
+networks:
+  laravel_network:
